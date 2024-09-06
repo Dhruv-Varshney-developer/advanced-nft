@@ -40,26 +40,26 @@ contract AdvancedNFT is ERC721Enumerable, Ownable(msg.sender), ReentrancyGuard, 
     constructor(bytes32 _merkleRoot, uint256 _maxSupply) ERC721("Advanced NFT", "ANFT") {
         merkleRoot = _merkleRoot;
         maxSupply = _maxSupply;
-        saleState = SaleState.Paused; // Start with Paused state
     }
 
-    // === Merkle Tree Airdrop (Minting) ===
-    function mintMerkle(bytes32[] calldata _merkleProof, uint256 index) public  whenNotPaused nonReentrant {
-        require(saleState == SaleState.Presale || saleState == SaleState.PublicSale, "Minting not active");
+    function mintWithMapping(bytes32[] calldata _merkleProof, uint256 index) public nonReentrant {
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender, index));
         require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), "Invalid proof");
         require(totalMinted < maxSupply, "Max supply reached");
+        require(!hasMintedMapping[msg.sender], "Already minted");
 
-        if (saleState == SaleState.Presale) {
-            // Check if the user already minted using the bitmap (for gas efficiency)
-            require(!hasMintedBitmap.get(index), "Already minted");
-            hasMintedBitmap.set(index); // Mark the user as minted
-        } else {
-            // Public sale check using mapping (less efficient)
-            require(!hasMintedMapping[msg.sender], "Already minted");
-            hasMintedMapping[msg.sender] = true;
-        }
+        hasMintedMapping[msg.sender] = true;
+        _safeMint(msg.sender, totalMinted);
+        totalMinted++;
+    }
 
+    function mintWithBitmap(bytes32[] calldata _merkleProof, uint256 index) public nonReentrant {
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, index));
+        require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), "Invalid proof");
+        require(totalMinted < maxSupply, "Max supply reached");
+        require(!hasMintedBitmap.get(index), "Already minted");
+
+        hasMintedBitmap.set(index);
         _safeMint(msg.sender, totalMinted);
         totalMinted++;
     }
@@ -92,22 +92,7 @@ contract AdvancedNFT is ERC721Enumerable, Ownable(msg.sender), ReentrancyGuard, 
         saleState = _newState;
     }
 
-    function mint(bytes32[] calldata _merkleProof, uint256 index) external whenNotPaused nonReentrant {
-        require(saleState != SaleState.Paused, "Minting is paused");
-        require(totalMinted < maxSupply, "Sold out");
-
-        if (saleState == SaleState.Presale) {
-            // Presale minting logic (Merkle proof required)
-            mintMerkle(_merkleProof, index);
-        } else if (saleState == SaleState.PublicSale) {
-            // Public sale minting (no Merkle proof required)
-            require(!hasMintedMapping[msg.sender], "Already minted");
-            hasMintedMapping[msg.sender] = true;
-
-            _safeMint(msg.sender, totalMinted);
-            totalMinted++;
-        }
-    }
+    
 
     // === Pull Pattern for Fund Withdrawals ===
     function withdraw() external nonReentrant {
