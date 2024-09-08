@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract AdvancedNFT is
-    ERC721Enumerable,
-    Ownable(msg.sender),
-    ReentrancyGuard,
-    Pausable
-{
+contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
     using BitMaps for BitMaps.BitMap;
 
     // Merkle tree root
@@ -46,6 +41,9 @@ contract AdvancedNFT is
 
     // Balances for contributors (for pull pattern)
     mapping(address => uint256) public balances;
+    // Whitelist of allowed function selectors
+
+    mapping(bytes4 => bool) public allowedFunctions;
 
     constructor(bytes32 _merkleRoot, uint256 _maxSupply)
         ERC721("Advanced NFT", "ANFT")
@@ -53,6 +51,8 @@ contract AdvancedNFT is
         merkleRoot = _merkleRoot;
         maxSupply = _maxSupply;
         saleState = SaleState.Paused;
+
+        allowedFunctions[this.transferFrom.selector] = true;
     }
 
     // === State Machine for Minting Phases ===
@@ -62,6 +62,7 @@ contract AdvancedNFT is
     }
 
     function setSaleState(SaleState _newState) external onlyOwner {
+        require(!paused(), "Contract is paused");
         saleState = _newState;
     }
 
@@ -139,12 +140,17 @@ contract AdvancedNFT is
     }
 
     // === Multicall for Transferring NFTs ===
+
     function multicall(bytes[] calldata data)
         external
         whenNotPaused
         nonReentrant
     {
         for (uint256 i = 0; i < data.length; i++) {
+            require(data[i].length >= 4, "Invalid call data");
+            bytes4 selector = bytes4(data[i][:4]);
+            require(allowedFunctions[selector], "Function not allowed");
+
             (bool success, ) = address(this).delegatecall(data[i]);
             require(success, "Transaction failed");
         }
@@ -162,10 +168,21 @@ contract AdvancedNFT is
     // === Pausable Functions ===
     function pause() external onlyOwner {
         _pause();
+        if (saleState != SaleState.SoldOut) {
+            saleState = SaleState.Paused;
+        }
     }
 
     function unpause() external onlyOwner {
         _unpause();
+        if (saleState == SaleState.Paused) {
+            // Revert to the appropriate state
+            if (totalMinted == maxSupply) {
+                saleState = SaleState.SoldOut;
+            } else {
+                saleState = SaleState.Presale;
+            }
+        }
     }
 
     // Receive function to accept funds (for pull payments)
