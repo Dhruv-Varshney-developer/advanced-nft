@@ -48,13 +48,11 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
 
     mapping(bytes4 => bool) public allowedFunctions;
 
-    constructor(bytes32 _merkleRoot, uint256 _maxSupply)
-        ERC721("Advanced NFT", "ANFT")
-    {
-        merkleRoot = _merkleRoot;
-        maxSupply = _maxSupply;
+    constructor() ERC721("Advanced NFT", "ANFT") {
+        merkleRoot = 0x063d63976891a949e32286ac8746c5af374caeea523fa4959c45f063bcc9db06;
+        maxSupply = 20;
         saleState = SaleState.Paused;
-        allowedFunctions[IERC721.transferFrom.selector] = true;
+        allowedFunctions[ERC721.transferFrom.selector] = true;
     }
 
     // === State Machine for Minting Phases ===
@@ -145,13 +143,18 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
     }
 
     // === Multicall for Transferring NFTs ===
-    function multiApprove(address[] calldata to, uint256[] calldata tokenIds)
-        external
-    {
-        require(to.length == tokenIds.length, "Arrays length mismatch");
-        for (uint256 i = 0; i < to.length; i++) {
-            approve(to[i], tokenIds[i]);
-        }
+    function generateTransferFromData(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public pure returns (bytes memory) {
+        return
+            abi.encodeWithSelector(
+                ERC721.transferFrom.selector,
+                from,
+                to,
+                tokenId
+            );
     }
 
     function multicall(bytes[] calldata data)
@@ -164,7 +167,7 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
             bytes4 selector = bytes4(data[i][:4]);
             require(allowedFunctions[selector], "Function not allowed");
 
-            (bool success, ) = address(this).delegatecall(data[i]);
+            (bool success, ) = address(this).call(data[i]);
             require(success, "Transaction failed");
         }
     }
