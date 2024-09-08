@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// commit-reveal can only be used public sale.
+// commit-reveal, multicall can only be used public sale.
 // mintwithbitmap and mintwithmapping can only be used during pre-sale
 
 pragma solidity ^0.8.0;
