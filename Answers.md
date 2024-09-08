@@ -8,4 +8,5 @@
 
 ## 2. What trick does OpenZeppelin use to save gas on the NonReentrant modifier?
 
-- OpenZeppelin uses a simple state variable to track if the function is being executed, preventing reentrant calls without complex checks, saving gas.
+OpenZeppelin's `NonReentrant` modifier saves gas by using a single storage slot with two states (entered/not entered) to track function reentrancy, minimizing costly storage operations. 
+This simple status flag approach efficiently prevents reentrancy attacks with minimal gas overhead.
