@@ -114,6 +114,8 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
     }
 
     // === Commit-Reveal for Random NFT ID Allocation ===
+    // web3.utils.keccak256(web3.eth.abi.encodeParameters(['uint256', 'uint256'], [replace_with_nftId, replace_with_secret])) - use this in console to generate hash
+
     function commit(bytes32 _commitHash)
         external
         validState(SaleState.PublicSale)
