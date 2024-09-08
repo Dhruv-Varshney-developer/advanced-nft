@@ -181,7 +181,7 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
             if (totalMinted == maxSupply) {
                 saleState = SaleState.SoldOut;
             } else {
-                saleState = SaleState.Presale;
+                saleState = SaleState.PublicSale;
             }
         }
     }
