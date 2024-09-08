@@ -72,7 +72,9 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
         nonReentrant
         validState(SaleState.Presale)
     {
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, index));
+        bytes32 leaf = keccak256(
+            bytes.concat(keccak256(abi.encode(msg.sender, index)))
+        );
         require(
             MerkleProof.verify(_merkleProof, merkleRoot, leaf),
             "Invalid proof"
@@ -89,7 +91,9 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
         nonReentrant
         validState(SaleState.Presale)
     {
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, index));
+        bytes32 leaf = keccak256(
+            bytes.concat(keccak256(abi.encode(msg.sender, index)))
+        );
         require(
             MerkleProof.verify(_merkleProof, merkleRoot, leaf),
             "Invalid proof"
