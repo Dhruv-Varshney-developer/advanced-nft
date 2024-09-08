@@ -101,8 +101,6 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
         _mintInternal();
     }
 
-
-
     function _mintInternal() private {
         _safeMint(msg.sender, totalMinted);
         totalMinted++;
@@ -112,13 +110,15 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
     }
 
     // === Commit-Reveal for Random NFT ID Allocation ===
-    function commit(bytes32 _commitHash) external  validState(SaleState.PublicSale){
+    function commit(bytes32 _commitHash)
+        external
+        validState(SaleState.PublicSale)
+    {
         commits[msg.sender] = Commit(_commitHash, block.number);
     }
 
     function reveal(uint256 _nftId, uint256 _secret)
         external
-        
         nonReentrant
         validState(SaleState.PublicSale)
     {
@@ -142,7 +142,6 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
 
     function multicall(bytes[] calldata data)
         external
-        
         nonReentrant
         validState(SaleState.PublicSale)
     {
@@ -164,9 +163,6 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
         balances[msg.sender] = 0;
         payable(msg.sender).transfer(amount);
     }
-
-    
-    
 
     // Receive function to accept funds (for pull payments)
     receive() external payable {
