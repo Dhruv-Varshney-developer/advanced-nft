@@ -1,0 +1,19 @@
+{
+  "format": "standard-v1",
+  "leafEncoding": ["address", "uint256"],
+  "tree": [
+    "0x063d63976891a949e32286ac8746c5af374caeea523fa4959c45f063bcc9db06",
+    "0x94b29c01ed483e694a7ecf386d384987d4d3e9d4e6c476f5b97302b23ff871c9",
+    "0x2f4efd012f30b85c3b205250c3dad4cd9208919ba8889723a8325ec6826f69e1"
+  ],
+  "values": [
+    {
+      "value": ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0"],
+      "treeIndex": 2
+    },
+    {
+      "value": ["0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2", "1"],
+      "treeIndex": 1
+    }
+  ]
+}
