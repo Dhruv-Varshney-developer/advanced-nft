@@ -9,10 +9,9 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
+contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
     using BitMaps for BitMaps.BitMap;
 
     // Merkle tree root
@@ -65,7 +64,6 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
     }
 
     function setSaleState(SaleState _newState) external onlyOwner {
-        require(!paused(), "Contract is paused");
         saleState = _newState;
     }
 
@@ -114,13 +112,13 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
     }
 
     // === Commit-Reveal for Random NFT ID Allocation ===
-    function commit(bytes32 _commitHash) external whenNotPaused validState(SaleState.PublicSale){
+    function commit(bytes32 _commitHash) external  validState(SaleState.PublicSale){
         commits[msg.sender] = Commit(_commitHash, block.number);
     }
 
     function reveal(uint256 _nftId, uint256 _secret)
         external
-        whenNotPaused
+        
         nonReentrant
         validState(SaleState.PublicSale)
     {
@@ -144,8 +142,9 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
 
     function multicall(bytes[] calldata data)
         external
-        whenNotPaused
+        
         nonReentrant
+        validState(SaleState.PublicSale)
     {
         for (uint256 i = 0; i < data.length; i++) {
             require(data[i].length >= 4, "Invalid call data");
@@ -166,25 +165,8 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
         payable(msg.sender).transfer(amount);
     }
 
-    // === Pausable Functions ===
-    function pause() external onlyOwner {
-        _pause();
-        if (saleState != SaleState.SoldOut) {
-            saleState = SaleState.Paused;
-        }
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
-        if (saleState == SaleState.Paused) {
-            // Revert to the appropriate state
-            if (totalMinted == maxSupply) {
-                saleState = SaleState.SoldOut;
-            } else {
-                saleState = SaleState.PublicSale;
-            }
-        }
-    }
+    
+    
 
     // Receive function to accept funds (for pull payments)
     receive() external payable {

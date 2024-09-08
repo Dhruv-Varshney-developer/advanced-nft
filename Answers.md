@@ -3,7 +3,7 @@
 
 ## 1. Should you use Pausable or NonReentrant in your NFT?
 
-- **Pausable**: Yes, use it to stop minting or transfers temporarily in case of bugs or exploits.
+- **Pausable**: No, since important function can be paused using state machine.
 - **NonReentrant**: Yes, to protect against reentrancy attacks, especially during fund withdrawals.
 
 ## 2. What trick does OpenZeppelin use to save gas on the NonReentrant modifier?
