@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: MIT
+// commit-reveal can only be used public sale.
+// mintwithbitmap and mintwithmapping can only be used during pre-sale
+
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -100,10 +103,7 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
         _mintInternal();
     }
 
-    function publicMint() public nonReentrant validState(SaleState.PublicSale) {
-        require(totalMinted < maxSupply, "Max supply reached");
-        _mintInternal();
-    }
+
 
     function _mintInternal() private {
         _safeMint(msg.sender, totalMinted);
@@ -114,7 +114,7 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
     }
 
     // === Commit-Reveal for Random NFT ID Allocation ===
-    function commit(bytes32 _commitHash) external whenNotPaused {
+    function commit(bytes32 _commitHash) external whenNotPaused validState(SaleState.PublicSale){
         commits[msg.sender] = Commit(_commitHash, block.number);
     }
 
@@ -122,6 +122,7 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
         external
         whenNotPaused
         nonReentrant
+        validState(SaleState.PublicSale)
     {
         Commit memory userCommit = commits[msg.sender];
         require(
