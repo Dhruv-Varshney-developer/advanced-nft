@@ -8,16 +8,21 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract AdvancedNFT is ERC721Enumerable, Ownable(msg.sender), ReentrancyGuard, Pausable {
+contract AdvancedNFT is
+    ERC721Enumerable,
+    Ownable(msg.sender),
+    ReentrancyGuard,
+    Pausable
+{
     using BitMaps for BitMaps.BitMap;
-    
+
     // Merkle tree root
     bytes32 public merkleRoot;
 
     // Mapping and Bitmap to track minted addresses
     mapping(address => bool) public hasMintedMapping;
     BitMaps.BitMap private hasMintedBitmap;
-    
+
     // Commit-Reveal Structure
     struct Commit {
         bytes32 commitHash;
@@ -27,7 +32,12 @@ contract AdvancedNFT is ERC721Enumerable, Ownable(msg.sender), ReentrancyGuard, 
     uint256 public revealDelay = 10;
 
     // State machine
-    enum SaleState { Paused, Presale, PublicSale, SoldOut }
+    enum SaleState {
+        Paused,
+        Presale,
+        PublicSale,
+        SoldOut
+    }
     SaleState public saleState;
 
     // Multicall functionality
@@ -37,31 +47,69 @@ contract AdvancedNFT is ERC721Enumerable, Ownable(msg.sender), ReentrancyGuard, 
     // Balances for contributors (for pull pattern)
     mapping(address => uint256) public balances;
 
-    constructor(bytes32 _merkleRoot, uint256 _maxSupply) ERC721("Advanced NFT", "ANFT") {
+    constructor(bytes32 _merkleRoot, uint256 _maxSupply)
+        ERC721("Advanced NFT", "ANFT")
+    {
         merkleRoot = _merkleRoot;
         maxSupply = _maxSupply;
+        saleState = SaleState.Paused;
     }
 
-    function mintWithMapping(bytes32[] calldata _merkleProof, uint256 index) public nonReentrant {
+    // === State Machine for Minting Phases ===
+    modifier validState(SaleState requiredState) {
+        require(saleState == requiredState, "Invalid state for this action");
+        _;
+    }
+
+    function setSaleState(SaleState _newState) external onlyOwner {
+        saleState = _newState;
+    }
+
+    function mintWithMapping(bytes32[] calldata _merkleProof, uint256 index)
+        public
+        nonReentrant
+        validState(SaleState.Presale)
+    {
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender, index));
-        require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), "Invalid proof");
+        require(
+            MerkleProof.verify(_merkleProof, merkleRoot, leaf),
+            "Invalid proof"
+        );
         require(totalMinted < maxSupply, "Max supply reached");
         require(!hasMintedMapping[msg.sender], "Already minted");
 
         hasMintedMapping[msg.sender] = true;
-        _safeMint(msg.sender, totalMinted);
-        totalMinted++;
+        _mintInternal();
     }
 
-    function mintWithBitmap(bytes32[] calldata _merkleProof, uint256 index) public nonReentrant {
+    function mintWithBitmap(bytes32[] calldata _merkleProof, uint256 index)
+        public
+        nonReentrant
+        validState(SaleState.Presale)
+    {
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender, index));
-        require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), "Invalid proof");
+        require(
+            MerkleProof.verify(_merkleProof, merkleRoot, leaf),
+            "Invalid proof"
+        );
         require(totalMinted < maxSupply, "Max supply reached");
         require(!hasMintedBitmap.get(index), "Already minted");
 
         hasMintedBitmap.set(index);
+        _mintInternal();
+    }
+
+    function publicMint() public nonReentrant validState(SaleState.PublicSale) {
+        require(totalMinted < maxSupply, "Max supply reached");
+        _mintInternal();
+    }
+
+    function _mintInternal() private {
         _safeMint(msg.sender, totalMinted);
         totalMinted++;
+        if (totalMinted == maxSupply) {
+            saleState = SaleState.SoldOut;
+        }
     }
 
     // === Commit-Reveal for Random NFT ID Allocation ===
@@ -69,10 +117,21 @@ contract AdvancedNFT is ERC721Enumerable, Ownable(msg.sender), ReentrancyGuard, 
         commits[msg.sender] = Commit(_commitHash, block.number);
     }
 
-    function reveal(uint256 _nftId, uint256 _secret) external whenNotPaused nonReentrant {
+    function reveal(uint256 _nftId, uint256 _secret)
+        external
+        whenNotPaused
+        nonReentrant
+    {
         Commit memory userCommit = commits[msg.sender];
-        require(block.number > userCommit.blockNumber + revealDelay, "Reveal too soon");
-        require(keccak256(abi.encodePacked(_nftId, _secret)) == userCommit.commitHash, "Invalid reveal");
+        require(
+            block.number > userCommit.blockNumber + revealDelay,
+            "Reveal too soon"
+        );
+        require(
+            keccak256(abi.encodePacked(_nftId, _secret)) ==
+                userCommit.commitHash,
+            "Invalid reveal"
+        );
 
         _safeMint(msg.sender, _nftId);
         totalMinted++;
@@ -80,19 +139,16 @@ contract AdvancedNFT is ERC721Enumerable, Ownable(msg.sender), ReentrancyGuard, 
     }
 
     // === Multicall for Transferring NFTs ===
-    function multicall(bytes[] calldata data) external whenNotPaused nonReentrant {
+    function multicall(bytes[] calldata data)
+        external
+        whenNotPaused
+        nonReentrant
+    {
         for (uint256 i = 0; i < data.length; i++) {
-            (bool success,) = address(this).delegatecall(data[i]);
+            (bool success, ) = address(this).delegatecall(data[i]);
             require(success, "Transaction failed");
         }
     }
-
-    // === State Machine for Minting Phases ===
-    function setSaleState(SaleState _newState) external onlyOwner {
-        saleState = _newState;
-    }
-
-    
 
     // === Pull Pattern for Fund Withdrawals ===
     function withdraw() external nonReentrant {
