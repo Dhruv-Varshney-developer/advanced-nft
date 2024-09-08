@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
     using BitMaps for BitMaps.BitMap;
@@ -51,8 +52,7 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard, Pausable {
         merkleRoot = _merkleRoot;
         maxSupply = _maxSupply;
         saleState = SaleState.Paused;
-
-        allowedFunctions[this.transferFrom.selector] = true;
+        allowedFunctions[IERC721.transferFrom.selector] = true;
     }
 
     // === State Machine for Minting Phases ===
