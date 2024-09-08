@@ -1,7 +1,3 @@
-// npm install @openzeppelin/merkle-tree
-// node merkleproof.mjs
-// off-chain
-
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import fs from "fs";
 
@@ -27,3 +23,9 @@ for (const [i, v] of tree.entries()) {
   const proof = tree.getProof(i); // Get the proof for the current entry
   console.log(`Merkle Proof for address ${address}:`, proof); // Log the proof
 }
+
+const proof=[
+  '0x94b29c01ed483e694a7ecf386d384987d4d3e9d4e6c476f5b97302b23ff871c9'
+]
+const verified = StandardMerkleTree.verify(tree.root, ["address", "uint256"], ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0"], proof);
+console.log('Is valid:', verified);  // Should return true if the proof is valid
