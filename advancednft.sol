@@ -177,7 +177,7 @@ contract AdvancedNFT is ERC721, Ownable(msg.sender), ReentrancyGuard {
     }
 
     // Receive function to accept funds (for pull payments)
-    receive() external payable {
+    function recievefunds() external payable {
         balances[msg.sender] += msg.value;
     }
 }
